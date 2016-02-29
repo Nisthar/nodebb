@@ -17,27 +17,27 @@ After that, you should have working `rhc` and `git` available on your system. If
 
 ## Installation
 
-To install NodeBB, follow these steps (they were tested using `bash` shell), without omitting any of them, on your local system (NOT on OpenShift side, through SSH).
+To install NodeBB, follow these steps (they were tested using `bash` shell), without omitting any of them (unless stated otherwise), on your local system (NOT on OpenShift side, through SSH).
 
 ### 1. Creating a new application
 
 ```sh
-rhc app create nodebb nodejs-0.10
+rhc app create nodebb http://cartreflect-claytondev.rhcloud.com/github/icflorescu/openshift-cartridge-nodejs NODE_VERSION_URL=https://semver.io/node/resolve/0.10
 ```
 
 That should create your local copy of your OpenShift repository in a directory called "nodebb". If it does not, check if there were some errors in the output and maybe try again before continuing. Without that directory, rest of the steps will not work as they should.
 
 ### 2. Adding database cartridge
 
-NodeBB supports both Redis and MongoDB databases. It's up to you to decide which one to use.
+NodeBB supports both Redis and MongoDB databases. It's up to you to decide which one to use. If you to not know anything about that, just select first one.
 
-To use local Redis, run:
+To use Redis local to OpenShift server, run:
 
 ```sh
-rhc add-cartridge http://cartreflect-claytondev.rhcloud.com/reflect?github=transformatordesign/openshift-redis-cart -a nodebb
+rhc cartridge add http://cartreflect-claytondev.rhcloud.com/reflect?github=transformatordesign/openshift-redis-cart -a nodebb
 ```
 
-To use local MongoDB, run:
+To use MongoDB local to OpenShift server, run:
 
 ```sh
 rhc cartridge add mongodb-2.4 -a nodebb
@@ -63,6 +63,12 @@ git remote add upstream -m master https://github.com/NodeBB/NodeBB.git
 
 ### 4. Import NodeBB code to application
 
+This will clean up directory from example stuff that node js cartridge created.
+
+```sh
+rm -rf `ls` .eslintrc && git commit -a -m 'Cleaned up for NodeBB'
+```
+
 This will import source code of NodeBB v0.9.x. To import different version instead, go to https://github.com/NodeBB/NodeBB, see what version branches are available and replace "v0.9.x" with selected version number.
 
 ```sh
@@ -73,7 +79,7 @@ This guide was tested with `v0.6.x`, `v0.7.x`, `v0.8.x` and `v0.9.x` branches.
 
 ### 5. Add OpenShift-NodeBB repository
 
-This will allow to import patches and action_hooks needed to use NodeBB on OpenShift without worrying too much about dynamic IP changes.
+This will allow to import patches and action_hooks needed to use NodeBB on OpenShift without worrying too much about dynamic IP and/or port number changes or files uploaded by users disappearing.
 
 ```sh
 git remote add openshift -m master https://github.com/ahwayakchih/openshift-nodebb.git
@@ -87,7 +93,7 @@ git pull --no-edit -s recursive -X theirs openshift master
 
 ### 7. Push everything to application repository
 
-This will push source code to OpenShift servers, deploy and start application.
+This will push everything to OpenShift servers, deploy and start NodeBB.
 
 ```sh
 git push origin master
@@ -95,7 +101,7 @@ git push origin master
 
 ### 8. That's it!
 
-After a while, you should be able to see something like this at the end of a long text output from previous command:
+After a while, you should be able to see something like this near the end of a long text output from previous command:
 
 ```
 	.-============================================-.
@@ -107,22 +113,41 @@ After a while, you should be able to see something like this at the end of a lon
 	.    login   : nodebb
 	.    password: 9D7u-KAtN-76Kz-TCyX
 	.
-	.  You can login at:
-	.  https://nodebb-youropenshiftusername.rhcloud.com/login
+	.  Please wait for NodeBB to start.
 	.
 	.  WARNING: Be sure to change admin e-mail and
-	.           password as soon as possible!
+	.           password after first log in!
 	^-============================================-^
 ```
 
-Use that new admin login and password to login into your new NodeBB installation, and change them to something suitable for you.
+And then:
+
+```
+	.-============================================-.
+	.  NodeBB is ready.
+	.
+	.  You can visit it at:
+	.  https://nodebb-youropenshiftusername.rhcloud.com/
+	.
+	.  You can log in to it at:
+	.  https://nodebb-youropenshiftusername.rhcloud.com/login
+	^-============================================-^
+```
+
+Use that new admin login and password to log in to your new NodeBB installation, and change them to something suitable for you.
 
 
 ## Updates
 
-From now on, every time you want to update NodeBB, you can simply follow three steps.
+From now on, every time you want to update NodeBB, you can simply follow three steps. Follow them on your local system (NOT on OpenShift side, through SSH).
 
 ### 1. Pull changes
+
+This will change current working directory to the one used for NodeBB. 
+
+```sh
+cd nodebb
+```
 
 Update NodeBB source code:
 
@@ -146,14 +171,27 @@ git push origin master
 
 ### 3. That's it!
 
-After a while (sometimes quite a long while), you should be able to see something like this at the end of a long text output from previous command:
+After a while (sometimes quite a long while), you should be able to see something like this near the end of a long text output from previous command:
 
 ```
 	.-============================================-.
 	.  Setup Finished.
 	.
-	.  You can view your NodeBB at:
+	.  Please wait for NodeBB to start.
+	^-============================================-^
+```
+
+And then:
+
+```
+	.-============================================-.
+	.  NodeBB is ready.
+	.
+	.  You can visit it at:
 	.  https://nodebb-youropenshiftusername.rhcloud.com/
+	.
+	.  You can log in to it at:
+	.  https://nodebb-youropenshiftusername.rhcloud.com/login
 	^-============================================-^
 ```
 
@@ -190,80 +228,108 @@ This will commit modifications to local repository.
 git commit -a -m 'Added QA plugin'
 ```
 
+Of course, instead of `Added QA plugin` you can write any other one-liner that explains what was changed.
+
 ### 3. Push changes
 
 ```
 git push origin master
 ```
 
+
 ## Custom domain name
 
-If you want to use your own domain name, instead of subdomain in domain provided by OpenShift, you can add alias to your application:
+If you want to use your own domain name, instead of subdomain in domain provided by OpenShift, you can add alias to your application.
+There is only one ceveat: to use HTTPS with your own domain name, you have to upgrade your OpenShift plan. Otherwise there is no way to set up correct SSL certificate and you will keep bumping into problems.
+
+So in short, here is when you can use HTTPS:
+
+- OpenShift domain
+- Custom domain only on premium plan
+
+There's no way for NodeBB to work 100% correctly with both HTTPS and custom domain name on a free plan.
+
+You can read more about that at https://developers.openshift.com/en/managing-domains-ssl.html
+
+As usual, follow these steps on your local system (NOT on OpenShift side, through SSH).
+
+### 1. Add domain name to application
 
 ```sh
 rhc alias add nodebb example.com
 ```
 
-Of course, instead of `example.com` enter your own domain name. You can read more about that at https://developers.openshift.com/en/managing-domains-ssl.html.
+Of course, instead of `example.com` enter your own domain name.
 
-### 1. Add domain name to NodeBB
+### 2. Add domain name to NodeBB
 
-This will make openshift-nodebb installation work correctly with your custom domain name.
+This will make NodeBB installation work correctly with your custom domain name.
 
 ```sh
-rhc set-env OPENSHIFT_APP_DNS_ALIAS=example.com -a nodebb
+rhc env set OPENSHIFT_APP_DNS_ALIAS=example.com -a nodebb
 ```
 
 Again, use your own domain name in place of `example.com`.
 
-### 2. Optional no-SSL-certificate workaround
+### 3. Optional SSL
 
-If you do not have certificate signed by widely accepted certificate authority, you can either make NodeBB connect websockets to your OpenShift subdomain (which provides valid, accepted SSL certificate), or disable secure websockets.
+If your account is on one of paid "premium" plans, you can add SSL certificate to enable valid usage of HTTPS with your custom domain name.
+You can get free, widely accepted certificates from https://letsencrypt.org/.
 
-This will make configuration to use OpenShift's subdomain for socket.io connections:
-
-```sh
-rhc set-env OPENSHIFT_NODEBB_WS_USE_APP_DNS=true -a nodebb
-
-```
-
-This will make configuration to keep using your custom domain, but connections will be insecure instead:
+Once you have a key and a certificate, this will add them to application:
 
 ```sh
-rhc set-env OPENSHIFT_NODEBB_WS_USE_INSECURE=true -a nodebb
+rhc alias update-cert nodebb example.com --certificate cert_file --private_key key_file
 ```
 
-Only one of those is needed and only when you want to use custom domain name. There is not much point in using both.
+Use your own domain name in place of `example.com`, and correct files in place of `cert_file` and `key_file`.
+Read more about setting up SSL at https://developers.openshift.com/en/managing-domains-ssl.html#_command_line_rhc_3
 
-### 3. Restart NodeBB
+You can add certificates at some point in future. Just remember to restart application after that.
 
-This will restart your NodeBB installation using updated configuration variables.
+### 4. Restart NodeBB
+
+This will restart your NodeBB installation, so it can use updated configuration variables.
 
 ```sh
 rhc app restart nodebb
 ```
 
-### 4. Test and retry
+If later you decide to change domain name, simply repeat steps 1 to 4.
 
-If option you selected in step 2 did not work, you can repeat steps 2 and 3 after removing previously selected option.
-
-This will remove first option from step 2.
-
-```sh
-rhc unset-env OPENSHIFT_NODEBB_WS_USE_APP_DNS
-```
-
-This will remove second option from step 2.
-
-```sh
-rhc unset-env OPENSHIFT_NODEBB_WS_USE_INSECURE
-```
-
-Now you can go back to step 2 and try different option.
 
 ## Troubleshooting
 
-### 1. Restart application
+### 1. Installation/Update error
+
+When something goes wrong with installation or update, you should see something like this near the end of a long text output:
+
+```
+	.-============================================-.
+	.  Setup failed.
+	.
+	.  There was a problem completing NodeBB setup.
+	.
+	.  Check logfile for more information:
+	.  logs/openshift-nodebb-setup.log
+	^-============================================-^
+```
+
+It may be either "Setup failed" or "NodeBB failed to start".
+
+Path to logfile is local to OpenShift server, so to check that file you can either log in to server through SSH or copy file to your local directory.
+
+This will copy log file from OpenShift server to your local directory.
+
+```sh
+rhc scp nodebb download ./ app-root/repo/logs/openshift-nodebb-setup.log
+```
+
+Use whatever path was mentioned in error message in place of "logs/logs/openshift-nodebb-setup.log".
+
+Once you have the log file, you can either check it yourself or post an issue at https://github.com/ahwayakchih/openshift-nodebb/issues (describing the steps you made and copying and pasting content of the logfile).
+
+### 2. Restart application
 
 Sometimes OpenShift may forget to restart application after its repository is updated. In such case, your "https://nodebb-youropenshiftusername.rhcloud.com/" site may not work as it should. That can be fixed with a simple command:
 
@@ -271,15 +337,41 @@ Sometimes OpenShift may forget to restart application after its repository is up
 rhc app restart
 ```
 
-### 2. Missing "origin" remote
+### 3. Add missing "origin" remote
 
 It looks like sometimes, for reasons unknown at the moment of writing this text, remote "origin" is missing. In such case you can run:
 
 ```sh
-git remote add origin `rhc app show nodebb | grep -oh "ssh://[^\s]\{1,\}\.rhcloud\.com/~/git/[^\s]*"`
+cd nodebb
+```
+
+and then:
+
+```sh
+git remote add origin `rhc app show nodebb | grep -oh "ssh://\S\{1,\}\.rhcloud.com/~/git/\S*"`
 ```
 
 This should configure remote "origin" in your local git repository to point to your git repository on OpenShift servers.
+
+### 4. Remove custom domain name
+
+If you want to remove custom domain name, this will stop NodeBB from using it:
+
+```sh
+rhc env unset OPENSHIFT_APP_DNS_ALIAS
+```
+
+If you did add certificate, this will remove it:
+
+```sh
+rhc alias delete-cert nodebb example.com
+```
+
+Finally, this will stop OpenShift from using your domain name:
+
+```sh
+rhc alias remove nodebb example.com
+```
 
 
 ## Acknowledgments
